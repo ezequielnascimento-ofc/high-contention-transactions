@@ -6,8 +6,8 @@
 
 - [Português](docs/pt-BR/README.md)
 - [English](docs/en/README.md)
-- [Español](docs/es/README.md)
-- [Français](docs/fr/README.md)
+- [Spanish](docs/es/README.md)
+- [French](docs/fr/README.md)
 
 ## Status
 
