@@ -1,7 +1,9 @@
 package com.ezequielnascimento.highcontention.product.domain.exceptions;
 
-public class ProductNotActiveException extends RuntimeException {
-    public ProductNotActiveException (String message) {
-        super(message);
+import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+
+public class ProductNotActiveException extends ProductDomainException {
+    public ProductNotActiveException (ProductId productId) {
+        super("Product is not active: " + productId.value());
     }
 }

@@ -4,40 +4,39 @@ import com.ezequielnascimento.highcontention.product.domain.exceptions.InvalidPr
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 public class Product {
-    private ProductId id;
+
+    private final ProductId id;
     private String name;
     private String description;
     private BigDecimal price;
     private ProductStatus status;
-    private Instant createdAt;
+    private final Instant createdAt;
     private Instant updatedAt;
 
-    private Product (
+    private Product(
             ProductId id,
             String name,
             String description,
             BigDecimal price,
             ProductStatus status,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt
+    ) {
         this.id = id;
-        this.name = name;
+        this.name = validateName(name);
         this.description = description;
-        this.price = price;
+        this.price = validatePrice(price);
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        validate();
     }
 
-    public static Product create (
-            String name,
-            String description,
-            BigDecimal price
-    ) {
-        Instant now = Instant.now();
+    public static Product create(String name, String description, BigDecimal price) {
+        Instant now = now();
         return new Product(
                 ProductId.generate(),
                 name,
@@ -49,33 +48,45 @@ public class Product {
         );
     }
 
-    private void validate() {
+    public static Product reconstitute(
+            ProductId id,
+            String name,
+            String description,
+            BigDecimal price,
+            ProductStatus status,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        return new Product(id, name, description, price, status, createdAt, updatedAt);
+    }
+
+    private static String validateName(String name) {
         if (name == null || name.isBlank()) {
             throw new InvalidProductException("Product name must not be blank");
         }
+        return name;
+    }
+
+    private static BigDecimal validatePrice(BigDecimal price) {
         if (price == null || price.signum() < 0) {
             throw new InvalidProductException("Product price must not be negative");
         }
+        return price;
     }
 
-    public void rename (String name) {
-        if (name == null || name.isBlank()) {
-            throw new InvalidProductException("Product name must not be blank");
-        }
-        this.name = name;
+    public void rename(String name) {
+        this.name = validateName(name);
         touch();
     }
 
-    public void changeDescription (String description) {
+    public void changeDescription(String description) {
+        // description é opcional por design — null/blank são valores válidos
         this.description = description;
         touch();
     }
 
-    public void changePrice (BigDecimal price) {
-        if (price == null || price.signum() < 0) {
-            throw new InvalidProductException("Product price must not be negative");
-        }
-        this.price = price;
+    public void changePrice(BigDecimal price) {
+        this.price = validatePrice(price);
         touch();
     }
 
@@ -90,10 +101,14 @@ public class Product {
     }
 
     private void touch() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = now();
     }
 
-    public ProductId id () {
+    private static Instant now() {
+        return Instant.now().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    public ProductId id() {
         return id;
     }
 
@@ -119,5 +134,17 @@ public class Product {
 
     public Instant updatedAt() {
         return updatedAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Product other)) return false;
+        return Objects.equals(id, other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
