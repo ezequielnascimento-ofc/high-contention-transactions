@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:highcontention_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: admin
+    password:
+    driver-class-name: org.h2.Driver
+
+  flyway:
+    enabled: true
