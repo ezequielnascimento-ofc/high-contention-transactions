@@ -1,11 +1,14 @@
 package com.ezequielnascimento.highcontention.inventory.application;
 
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
+import com.ezequielnascimento.highcontention.inventory.domain.port.in.IncreaseStockUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
+import org.springframework.transaction.annotation.Transactional;
 
-public class IncreaseStockService {
+public class IncreaseStockService implements IncreaseStockUseCase {
 
     private final InventoryRepository inventoryRepository;
 
@@ -13,12 +16,20 @@ public class IncreaseStockService {
         this.inventoryRepository = inventoryRepository;
     }
 
+    @Override
+    @Transactional
     public Inventory execute(InventoryId inventoryId, int quantity) {
-        Inventory inventory = inventoryRepository.findById(inventoryId)
+        if (quantity <= 0) {
+            throw new InvalidInventoryException("Increase quantity must be greater than zero");
+        }
+
+        boolean increased = inventoryRepository.increaseQuantity(inventoryId, quantity);
+
+        if (!increased) {
+            throw new InventoryNotFoundException(inventoryId);
+        }
+
+        return inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new InventoryNotFoundException(inventoryId));
-
-        inventory.increase(quantity);
-
-        return inventoryRepository.save(inventory);
     }
 }

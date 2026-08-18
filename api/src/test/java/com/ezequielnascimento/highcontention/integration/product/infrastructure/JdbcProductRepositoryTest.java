@@ -3,6 +3,7 @@ package com.ezequielnascimento.highcontention.integration.product.infrastructure
 import com.ezequielnascimento.highcontention.product.domain.model.Product;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import com.ezequielnascimento.highcontention.product.domain.port.out.ProductRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,12 +23,28 @@ class JdbcProductRepositoryTest {
     @Autowired
     private ProductRepository repository;
 
+    private final List<ProductId> createdProductIds = new ArrayList<>();
+
+    @AfterEach
+    void cleanUp() {
+        for (ProductId id : createdProductIds) {
+            repository.findById(id).ifPresent(repository::delete);
+        }
+        createdProductIds.clear();
+    }
+
+    private Product createAndTrack(String name, String description, BigDecimal price) {
+        Product product = Product.create(name, description, price);
+        createdProductIds.add(product.id());
+        return product;
+    }
+
     @Nested
     class Save {
 
         @Test
         void shouldInsertNewProductAndAssignPersistedFields() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
 
             Product saved = repository.save(product);
@@ -40,7 +59,7 @@ class JdbcProductRepositoryTest {
 
         @Test
         void shouldUpdateExistingProductWhenSavedAgain() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             repository.save(product);
 
@@ -55,7 +74,7 @@ class JdbcProductRepositoryTest {
 
         @Test
         void shouldNotDuplicateProductWhenSavedTwiceWithSameId() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
 
             repository.save(product);
@@ -70,7 +89,7 @@ class JdbcProductRepositoryTest {
 
         @Test
         void shouldReturnProductWhenItExists() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             repository.save(product);
 
@@ -96,7 +115,7 @@ class JdbcProductRepositoryTest {
 
         @Test
         void shouldReturnTrueWhenProductExists() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             repository.save(product);
 
@@ -116,7 +135,7 @@ class JdbcProductRepositoryTest {
 
         @Test
         void shouldRemoveProductFromDatabase() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             repository.save(product);
             assertTrue(repository.existsById(product.id()));

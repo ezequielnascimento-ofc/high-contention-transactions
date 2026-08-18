@@ -4,88 +4,103 @@ import com.ezequielnascimento.highcontention.inventory.application.IncreaseStock
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
+import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class IncreaseStockServiceTest {
 
-    @Test
-    void shouldIncreaseStock() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Mock
+    private InventoryRepository inventoryRepository;
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+    @InjectMocks
+    private IncreaseStockService increaseStockService;
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+    @Nested
+    class SuccessfulIncrease {
 
-        when(repository.save(inventory))
-                .thenReturn(inventory);
+        @Test
+        void shouldIncreaseStockAndReturnUpdatedInventory() {
+            Inventory inventory = Inventory.create(ProductId.generate(), 100);
+            Inventory updated = Inventory.reconstitute(
+                    inventory.id(), inventory.productId(), 150, inventory.createdAt(), inventory.updatedAt());
 
-        IncreaseStockService useCase = new IncreaseStockService(repository);
+            when(inventoryRepository.increaseQuantity(inventory.id(), 50)).thenReturn(true);
+            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(updated));
 
-        Inventory result = useCase.execute(
-                inventory.id(),
-                50
-        );
+            Inventory result = increaseStockService.execute(inventory.id(), 50);
 
-        assertEquals(150, result.quantity());
+            assertEquals(150, result.quantity());
+        }
 
-        verify(repository).findById(inventory.id());
-        verify(repository).save(inventory);
+        @Test
+        void shouldCallIncreaseQuantityOnRepository() {
+            InventoryId inventoryId = InventoryId.generate();
+            Inventory updated = Inventory.create(ProductId.generate(), 150);
+
+            when(inventoryRepository.increaseQuantity(inventoryId, 50)).thenReturn(true);
+            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.of(updated));
+
+            increaseStockService.execute(inventoryId, 50);
+
+            verify(inventoryRepository).increaseQuantity(inventoryId, 50);
+        }
     }
 
-    @Test
-    void shouldRejectInvalidQuantity() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class QuantityValidation {
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+        @Test
+        void shouldRejectZeroAsIncreaseAmount() {
+            InventoryId inventoryId = InventoryId.generate();
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+            assertThrows(InvalidInventoryException.class,
+                    () -> increaseStockService.execute(inventoryId, 0));
 
-        IncreaseStockService useCase = new IncreaseStockService(repository);
+            verify(inventoryRepository, never()).increaseQuantity(any(), anyInt());
+        }
 
-        assertThrows(
-                InvalidInventoryException.class,
-                () -> useCase.execute(inventory.id(), -1)
-        );
+        @Test
+        void shouldRejectNegativeIncreaseAmount() {
+            InventoryId inventoryId = InventoryId.generate();
 
-        assertEquals(100, inventory.quantity());
+            assertThrows(InvalidInventoryException.class,
+                    () -> increaseStockService.execute(inventoryId, -1));
 
-        verify(repository).findById(inventory.id());
-        verify(repository, never()).save(any());
+            verify(inventoryRepository, never()).increaseQuantity(any(), anyInt());
+        }
     }
 
-    @Test
-    void shouldThrowWhenInventoryDoesNotExist() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class WhenInventoryDoesNotExist {
 
-        var inventoryId = com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId.generate();
+        @Test
+        void shouldThrowInventoryNotFoundExceptionWhenRepositoryReportsNoRowsAffected() {
+            InventoryId inventoryId = InventoryId.generate();
+            when(inventoryRepository.increaseQuantity(inventoryId, 50)).thenReturn(false);
 
-        when(repository.findById(inventoryId))
-                .thenReturn(Optional.empty());
+            assertThrows(InventoryNotFoundException.class,
+                    () -> increaseStockService.execute(inventoryId, 50));
+        }
+    }
 
-        IncreaseStockService useCase = new IncreaseStockService(repository);
-
-        assertThrows(
-                InventoryNotFoundException.class,
-                () -> useCase.execute(inventoryId, 50)
-        );
-
-        verify(repository).findById(inventoryId);
-        verify(repository, never()).save(any());
+    private InventoryId any() {
+        return org.mockito.ArgumentMatchers.any(InventoryId.class);
     }
 }

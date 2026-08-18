@@ -6,21 +6,22 @@ import com.ezequielnascimento.highcontention.product.domain.exceptions.ProductNo
 import com.ezequielnascimento.highcontention.product.domain.model.Product;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import com.ezequielnascimento.highcontention.product.domain.port.out.ProductRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class RenameProductIntegrationTest {
 
     @Autowired
@@ -29,12 +30,28 @@ class RenameProductIntegrationTest {
     @Autowired
     private ProductRepository productRepository;
 
+    private final List<ProductId> createdProductIds = new ArrayList<>();
+
+    @AfterEach
+    void cleanUp() {
+        for (ProductId id : createdProductIds) {
+            productRepository.findById(id).ifPresent(productRepository::delete);
+        }
+        createdProductIds.clear();
+    }
+
+    private Product createAndTrack(String name, String description, BigDecimal price) {
+        Product product = Product.create(name, description, price);
+        createdProductIds.add(product.id());
+        return product;
+    }
+
     @Nested
     class SuccessfulRename {
 
         @Test
         void shouldRenameProductAndPersistChange() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             productRepository.save(product);
 
@@ -50,7 +67,7 @@ class RenameProductIntegrationTest {
 
         @Test
         void shouldRejectBlankName() {
-            Product product = Product.create(
+            Product product = createAndTrack(
                     "Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
             productRepository.save(product);
 

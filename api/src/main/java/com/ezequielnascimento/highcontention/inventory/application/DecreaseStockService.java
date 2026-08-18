@@ -1,11 +1,15 @@
 package com.ezequielnascimento.highcontention.inventory.application;
 
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InsufficientStockException;
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
+import com.ezequielnascimento.highcontention.inventory.domain.port.in.DecreaseStockUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
+import org.springframework.transaction.annotation.Transactional;
 
-public class DecreaseStockService {
+public class DecreaseStockService implements DecreaseStockUseCase {
 
     private final InventoryRepository inventoryRepository;
 
@@ -13,12 +17,23 @@ public class DecreaseStockService {
         this.inventoryRepository = inventoryRepository;
     }
 
+    @Override
+    @Transactional
     public Inventory execute(InventoryId inventoryId, int quantity) {
-        Inventory inventory = inventoryRepository.findById(inventoryId)
+        if (quantity <= 0) {
+            throw new InvalidInventoryException("Decrease quantity must be greater than zero");
+        }
+
+        boolean decreased = inventoryRepository.decreaseQuantity(inventoryId, quantity);
+
+        if (!decreased) {
+            Inventory current = inventoryRepository.findById(inventoryId)
+                    .orElseThrow(() -> new InventoryNotFoundException(inventoryId));
+
+            throw new InsufficientStockException(inventoryId, current.quantity(), quantity);
+        }
+
+        return inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new InventoryNotFoundException(inventoryId));
-
-        inventory.decrease(quantity);
-
-        return inventoryRepository.save(inventory);
     }
 }

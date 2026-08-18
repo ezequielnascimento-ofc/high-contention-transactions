@@ -1,117 +1,122 @@
 package com.ezequielnascimento.highcontention.unit.inventory.application;
 
 import com.ezequielnascimento.highcontention.inventory.application.DecreaseStockService;
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InsufficientStockException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class DecreaseStockServiceTest {
 
-    @Test
-    void shouldDecreaseStock() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Mock
+    private InventoryRepository inventoryRepository;
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+    @InjectMocks
+    private DecreaseStockService decreaseStockService;
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+    @Nested
+    class SuccessfulDecrease {
 
-        when(repository.save(inventory))
-                .thenReturn(inventory);
+        @Test
+        void shouldDecreaseStockAndReturnUpdatedInventory() {
+            Inventory inventory = Inventory.create(ProductId.generate(), 100);
+            Inventory updated = Inventory.reconstitute(
+                    inventory.id(), inventory.productId(), 70, inventory.createdAt(), inventory.updatedAt());
 
-        DecreaseStockService useCase = new DecreaseStockService(repository);
+            when(inventoryRepository.decreaseQuantity(inventory.id(), 30)).thenReturn(true);
+            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(updated));
 
-        Inventory result = useCase.execute(
-                inventory.id(),
-                30
-        );
+            Inventory result = decreaseStockService.execute(inventory.id(), 30);
 
-        assertEquals(70, result.quantity());
+            assertEquals(70, result.quantity());
+        }
 
-        verify(repository).findById(inventory.id());
-        verify(repository).save(inventory);
+        @Test
+        void shouldCallDecreaseQuantityOnRepository() {
+            InventoryId inventoryId = InventoryId.generate();
+            Inventory updated = Inventory.create(ProductId.generate(), 70);
+
+            when(inventoryRepository.decreaseQuantity(inventoryId, 30)).thenReturn(true);
+            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.of(updated));
+
+            decreaseStockService.execute(inventoryId, 30);
+
+            verify(inventoryRepository).decreaseQuantity(inventoryId, 30);
+        }
     }
 
-    @Test
-    void shouldRejectWhenQuantityIsInsufficient() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class QuantityValidation {
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+        @Test
+        void shouldRejectZeroAsDecreaseAmount() {
+            InventoryId inventoryId = InventoryId.generate();
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+            assertThrows(InvalidInventoryException.class,
+                    () -> decreaseStockService.execute(inventoryId, 0));
 
-        DecreaseStockService useCase = new DecreaseStockService(repository);
+            verify(inventoryRepository, never())
+                    .decreaseQuantity(ArgumentMatchers.any(), ArgumentMatchers.anyInt());
+        }
 
-        assertThrows(
-                InvalidInventoryException.class,
-                () -> useCase.execute(inventory.id(), 101)
-        );
+        @Test
+        void shouldRejectNegativeDecreaseAmount() {
+            InventoryId inventoryId = InventoryId.generate();
 
-        assertEquals(100, inventory.quantity());
+            assertThrows(InvalidInventoryException.class,
+                    () -> decreaseStockService.execute(inventoryId, -1));
 
-        verify(repository).findById(inventory.id());
-        verify(repository, never()).save(any());
+            verify(inventoryRepository, never())
+                    .decreaseQuantity(ArgumentMatchers.any(), ArgumentMatchers.anyInt());
+        }
     }
 
-    @Test
-    void shouldRejectInvalidQuantity() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class WhenStockIsInsufficient {
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+        @Test
+        void shouldThrowInsufficientStockExceptionWithCurrentAndRequestedAmounts() {
+            Inventory inventory = Inventory.create(ProductId.generate(), 100);
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+            when(inventoryRepository.decreaseQuantity(inventory.id(), 150)).thenReturn(false);
+            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(inventory));
 
-        DecreaseStockService useCase = new DecreaseStockService(repository);
-
-        assertThrows(
-                InvalidInventoryException.class,
-                () -> useCase.execute(inventory.id(), -1)
-        );
-
-        assertEquals(100, inventory.quantity());
-
-        verify(repository).findById(inventory.id());
-        verify(repository, never()).save(any());
+            assertThrows(InsufficientStockException.class,
+                    () -> decreaseStockService.execute(inventory.id(), 150));
+        }
     }
 
-    @Test
-    void shouldThrowWhenInventoryDoesNotExist() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class WhenInventoryDoesNotExist {
 
-        InventoryId inventoryId = InventoryId.generate();
+        @Test
+        void shouldThrowInventoryNotFoundException() {
+            InventoryId inventoryId = InventoryId.generate();
 
-        when(repository.findById(inventoryId))
-                .thenReturn(Optional.empty());
+            when(inventoryRepository.decreaseQuantity(inventoryId, 30)).thenReturn(false);
+            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.empty());
 
-        DecreaseStockService useCase = new DecreaseStockService(repository);
-
-        assertThrows(
-                InventoryNotFoundException.class,
-                () -> useCase.execute(inventoryId, 10)
-        );
-
-        verify(repository).findById(inventoryId);
-        verify(repository, never()).save(any());
+            assertThrows(InventoryNotFoundException.class,
+                    () -> decreaseStockService.execute(inventoryId, 30));
+        }
     }
 }

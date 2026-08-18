@@ -6,54 +6,54 @@ import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class GetInventoryServiceTest {
 
+    @Mock
+    private InventoryRepository inventoryRepository;
 
-    @Test
-    void shouldReturnInventory() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @InjectMocks
+    private GetInventoryService getInventoryService;
 
-        Inventory inventory = Inventory.create(
-                ProductId.generate(),
-                100
-        );
+    @Nested
+    class WhenInventoryExists {
 
-        when(repository.findById(inventory.id()))
-                .thenReturn(Optional.of(inventory));
+        @Test
+        void shouldReturnInventoryFoundByRepository() {
+            Inventory inventory = Inventory.create(ProductId.generate(), 100);
+            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(inventory));
 
-        GetInventoryService useCase = new GetInventoryService(repository);
+            Inventory result = getInventoryService.execute(inventory.id());
 
-        Inventory result = useCase.execute(inventory.id());
-
-        assertSame(inventory, result);
-
-        verify(repository).findById(inventory.id());
+            assertSame(inventory, result);
+            verify(inventoryRepository).findById(inventory.id());
+        }
     }
 
-    @Test
-    void shouldThrowWhenInventoryDoesNotExist() {
-        InventoryRepository repository = mock(InventoryRepository.class);
+    @Nested
+    class WhenInventoryDoesNotExist {
 
-        InventoryId inventoryId = InventoryId.generate();
+        @Test
+        void shouldThrowInventoryNotFoundException() {
+            InventoryId inventoryId = InventoryId.generate();
+            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.empty());
 
-        when(repository.findById(inventoryId))
-                .thenReturn(Optional.empty());
-
-        GetInventoryService useCase = new GetInventoryService(repository);
-
-        assertThrows(
-                InventoryNotFoundException.class,
-                () -> useCase.execute(inventoryId)
-        );
-
-        verify(repository).findById(inventoryId);
+            assertThrows(InventoryNotFoundException.class,
+                    () -> getInventoryService.execute(inventoryId));
+        }
     }
 }
