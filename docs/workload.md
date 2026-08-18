@@ -8,6 +8,11 @@ The workload model establishes reproducible conditions for concurrency, contenti
 
 Performance results must not be interpreted independently from the workload that produced them.
 
+### Status Legend
+
+- ✅ Executed - this workload has been run and produced verified results.
+- ⬜ Planned - defined in the model, not yet executed.
+
 ## 2. Workload Dimensions
 
 The workload will be characterized by the following dimensions:
@@ -121,37 +126,37 @@ The over-demand scenario is particularly important for validating overselling pr
 
 ## 8. Allocation Quantity
 
-The initial benchmark model will use single-unit allocation:
+The initial benchmark model uses single-unit allocation:
 
     requested_quantity = 1
 
-This simplifies the correctness model and allows concurrency behavior to be isolated.
+This simplifies the correctness model and allows concurrency behavior to be isolated. This is the model used by the executed experiment (Section 10, Scenario A′).
 
 Multi-unit allocation may be introduced later to evaluate whether the concurrency-control strategy remains correct when requests compete for different quantities.
 
 ## 9. Request Arrival Patterns
 
-The workload model will distinguish between different request arrival patterns.
+The workload model distinguishes between different request arrival patterns.
 
-### Burst
+### Burst ✅
 
 A large number of requests arrive within a very short period.
 
     Requests  │██████████████████████████
               └──────────────────────────→ time
 
-This represents flash-sale-like traffic.
+This represents flash-sale-like traffic. **This is the pattern used by the executed experiment** - all threads are released simultaneously via a `CountDownLatch`, producing a true burst rather than a staggered arrival.
 
-### Sustained Load
+### Sustained Load ⬜
 
 Requests arrive continuously over a defined period.
 
     Requests  │██████████████████████████
               └──────────────────────────→ time
 
-This is useful for observing resource saturation and steady-state behavior.
+This is useful for observing resource saturation and steady-state behavior. Not yet executed.
 
-### Ramp-Up
+### Ramp-Up ⬜
 
 Concurrency gradually increases until the system reaches a defined limit.
 
@@ -164,33 +169,41 @@ Concurrency gradually increases until the system reaches a defined limit.
         │/
         └──────────────────→ time
 
-This workload is useful for identifying saturation points.
+This workload is useful for identifying saturation points. Not yet executed.
 
-## 10. Initial Test Scenarios
+## 10. Test Scenarios
 
-The following scenarios establish the initial experimental matrix.
+The following scenarios establish the experimental matrix. Scenario A′ has been executed; the remainder are planned.
 
-### Scenario A — Correctness Baseline
+### Scenario A′ - Exact Demand-Supply Contention ✅ Executed
 
 Purpose:
 
-Validate the basic transactional behavior without extreme contention.
+Validate overselling prevention under a demand-supply ratio of exactly 2:1, at increasing concurrency levels, using an in-process burst workload.
 
-    initial_stock       = 1,000
-    allocation_attempts = 1,000
+This is the scenario actually implemented by `DecreaseStockConcurrencyTest`, run independently at four concurrency levels:
+
+    concurrency         = 10, 100, 1,000, 10,000  (one run per value)
+    initial_stock       = concurrency / 2
+    allocation_attempts = concurrency
     requested_quantity  = 1
+    arrival_pattern     = burst (CountDownLatch-synchronized)
+    execution_layer     = in-process (application service, not HTTP)
 
-Expected:
+Result, for every concurrency level tested:
 
-    successful_allocations = 1,000
+    successful_allocations = concurrency / 2   (exactly)
+    rejected_allocations   = concurrency / 2   (InsufficientStockException)
     final_stock             = 0
     overselling             = 0
 
-### Scenario B — Oversupply
+Deviation from the model as originally proposed: this scenario tests exactly at the 2:1 demand-supply ratio rather than the 10:1 ratio used in Scenario B below, and it exercises the application layer directly rather than an HTTP-facing endpoint, since no Controller exists yet. The result is nonetheless a direct verification of `INV-001`, `INV-002`, `INV-003`, `INV-004`, `INV-008`, and `INV-009` (see `invariants.md`).
+
+### Scenario B - Oversupply ⬜ Planned
 
 Purpose:
 
-Validate overselling prevention when demand exceeds supply.
+Validate overselling prevention when demand exceeds supply by a wider margin than Scenario A′.
 
     initial_stock       = 1,000
     allocation_attempts = 10,000
@@ -202,11 +215,13 @@ Expected:
     final_stock >= 0
     overselling = 0
 
-### Scenario C — Extreme Contention
+Not yet executed. Expected to hold based on the correctness reasoning already validated in Scenario A′, since the underlying mechanism (atomic conditional `UPDATE`) does not depend on the specific demand-supply ratio.
+
+### Scenario C - Extreme Contention (Single Unit) ⬜ Planned
 
 Purpose:
 
-Evaluate behavior when many operations compete for the same resource.
+Evaluate behavior when many operations compete for a single remaining unit - the most extreme contention case.
 
     initial_stock       = 1
     allocation_attempts = 10,000
@@ -218,7 +233,9 @@ Expected:
     final_stock             = 0
     overselling             = 0
 
-### Scenario D — Demand Below Supply
+Not yet executed. This is a stricter version of Scenario A′ (2:1 ratio) at a 10,000:1 ratio, and is expected to be the most demanding correctness test in the matrix.
+
+### Scenario D - Demand Below Supply ⬜ Planned
 
 Purpose:
 
@@ -234,7 +251,9 @@ Expected:
     final_stock             = 9,000
     overselling             = 0
 
-### Scenario E — Ramp-Up
+Not yet executed.
+
+### Scenario E - Ramp-Up ⬜ Planned
 
 Purpose:
 
@@ -252,26 +271,33 @@ Concurrency should gradually increase while monitoring:
 - CPU
 - Memory
 
-The saturation point must be determined experimentally.
+The saturation point must be determined experimentally. Not yet executed - this scenario requires the performance instrumentation described in `requirements.md`, Section 4, which has not been built yet.
 
 ## 11. Baseline Environment
 
 Every benchmark must record the environment in which it was executed.
 
-At minimum:
+Recorded for the executed experiment (Scenario A′):
+
+    Database                : H2 (in-memory, MODE=PostgreSQL), not PostgreSQL directly
+    Connection pool         : HikariCP, maximum-pool-size = 50
+    Test framework          : JUnit 5 (@ParameterizedTest)
+    Concurrency mechanism   : java.util.concurrent.ExecutorService (fixed thread pool, capped at 500) + CountDownLatch
+    Execution layer         : in-process (DecreaseStockService called directly, no HTTP)
+
+Not yet recorded, pending a dedicated benchmark run against production-equivalent infrastructure:
 
 - Operating system
 - CPU
 - Available memory
-- Java version
-- JVM configuration
+- Java version (JVM used for the test run)
+- JVM configuration (heap size, GC)
 - Spring Boot version
-- PostgreSQL version
-- Redis version, when applicable
-- Database configuration
-- Connection pool configuration
+- PostgreSQL version (production target, not yet used in concurrency testing)
 - Application instance count
-- Load-testing tool and version
+- Load-testing tool and version (no external load-testing tool has been used yet - concurrency was driven from within the JUnit test itself)
+
+This gap is intentional at this stage: the executed experiment was designed to validate **correctness** under concurrency, not to produce a performance baseline. Section 4 of `requirements.md` tracks the performance-measurement work as not yet started.
 
 ## 12. Benchmark Isolation
 
@@ -289,6 +315,8 @@ Whenever possible:
 
 The same workload must be used when comparing different implementations.
 
+**Current state.** The executed experiment resets its own dataset per run - each `@ParameterizedTest` iteration creates a fresh `Product` and `Inventory` and removes them via `@AfterEach`, so no cross-run contamination occurs. Multiple iterations of the same concurrency level have not yet been run to measure variability (see Section 13).
+
 ## 13. Repetitions
 
 A benchmark must not rely on a single execution.
@@ -303,6 +331,8 @@ Results should distinguish between:
 - Percentiles where appropriate
 
 Latency should primarily be evaluated using percentiles rather than averages alone.
+
+**Current state.** Each concurrency level (10, 100, 1,000, 10,000) has been executed once, as a correctness check rather than a statistical benchmark. No repeated runs exist yet to characterize variability, and no latency measurements have been collected - the test currently asserts correctness of final state, not timing.
 
 ## 14. Correctness Verification
 
@@ -322,6 +352,8 @@ Performance results from an implementation that violates a critical invariant mu
 
 A faster incorrect implementation is not an improvement.
 
+**Current state.** All three conditions above are explicitly asserted in `DecreaseStockConcurrencyTest` for every executed concurrency level, and all three held in every run. See `invariants.md` for the full mapping between this verification and the formal invariants (`INV-001` through `INV-004`).
+
 ## 15. Experimental Principle
 
 Performance comparisons must change one significant variable at a time whenever practical.
@@ -339,6 +371,8 @@ For example:
     Measure
 
 The objective is to isolate the impact of the concurrency-control strategy.
+
+**Current state.** Only one concurrency-control strategy has been implemented and measured so far - the atomic conditional `UPDATE` (see `problem.md` for the comparison reasoning against pessimistic and optimistic locking, which was made analytically, not experimentally). A controlled experimental comparison against alternative strategies has not been executed.
 
 ## 16. Future Workloads
 

@@ -20,7 +20,7 @@ The challenge is maintaining system invariants when many operations attempt to m
 
 Design, implement, and evaluate transactional concurrency-control strategies capable of preventing overselling while maintaining measurable performance under high contention.
 
-The project should demonstrate the relationship between:
+The project demonstrates the relationship between:
 
 - concurrency;
 - transaction boundaries;
@@ -33,7 +33,9 @@ The project should demonstrate the relationship between:
 - failure handling;
 - scalability.
 
-Architectural decisions must be supported by reproducible tests and measurable evidence rather than assumptions.
+Architectural decisions are supported by reproducible tests and measurable evidence rather than assumptions.
+
+**Strategy adopted**: atomic conditional `UPDATE` (`UPDATE inventory SET quantity = quantity - :qty WHERE id = :id AND quantity >= :qty`), chosen over pessimistic locking (`SELECT FOR UPDATE`) and optimistic locking (version column + retry). This strategy delegates the atomicity guarantee to the database itself — the availability check and the write happen in a single, indivisible operation, with no explicit application-level lock and no retry logic required. See `invariants.md` for the correctness argument and `workload.md` for the empirical validation.
 
 ## Scope
 
@@ -44,44 +46,6 @@ Architectural decisions must be supported by reproducible tests and measurable e
 - Concurrency control.
 - Inventory management.
 - Overselling prevention.
-- Idempotency.
 - PostgreSQL transaction behavior.
-- Redis evaluation where technically justified.
 - Concurrency testing.
-- Load testing.
-- Performance benchmarking.
-- Observability.
-- Resilience.
-- Secure-by-default development practices.
-
-### Out of Scope
-
-- Real payment processing.
-- Frontend development.
-- Shipping and fulfillment.
-- Full product catalog management.
-- Kubernetes.
-- Microservices without a demonstrated requirement.
-- Distributed messaging without a demonstrated requirement.
-- Cloud infrastructure without a demonstrated requirement.
-
-## Initial Scenario
-
-The initial scenario consists of a finite inventory being accessed concurrently by a large number of purchase attempts.
-
-Example workload:
-
-- Initial inventory: 1,000 units.
-- Purchase attempts: 10,000.
-- High concurrent request volume.
-- Multiple requests targeting the same inventory.
-
-The exact workload model will be formally defined before performance testing begins.
-
-## Expected Outcome
-
-The system must prevent successful operations from consuming resources that are no longer available.
-
-Correctness must be demonstrated through automated tests and reproducible experiments.
-
-Performance claims must be supported by measurements.
+- Secure-by-default development
