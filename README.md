@@ -1,3 +1,13 @@
+<p align="right">
+  <sub>
+    <b>Language:</b>&nbsp;&nbsp;
+    <a href="README.md">Português</a> /
+    <a href="profile/english.md">English</a> /
+    <a href="profile/spanish.md">Spanish</a> /
+    <a href="profile/french.md">French</a>
+  </sub>
+</p>
+
 # High-Contention Transactions
 
 > Engineering transactional systems under high contention.
@@ -20,13 +30,6 @@ The project simulates a classic e-commerce race condition, many simultaneous req
 - PostgreSQL (production) · H2 (test)
 - Flyway for schema migrations
 - JUnit 5 + Mockito
-
-## Documentation
-
-- [Português](docs/pt-BR/README.md)
-- [English](docs/en/README.md)
-- [Spanish](docs/es/README.md)
-- [French](docs/fr/README.md)
 
 ## Status
 
