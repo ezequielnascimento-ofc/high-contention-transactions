@@ -1,4 +1,4 @@
-package com.ezequielnascimento.highcontention.integration.product.infrastructure;
+package com.ezequielnascimento.highcontention.integration.product.infrastructure.adapter.persistence;
 
 import com.ezequielnascimento.highcontention.product.domain.model.Product;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
