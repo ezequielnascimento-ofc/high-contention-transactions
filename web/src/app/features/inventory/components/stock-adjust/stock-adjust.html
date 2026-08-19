@@ -1,0 +1,47 @@
+@if (loading()) {
+  <p class="text-gray-500">Carregando...</p>
+} @else if (error()) {
+  <p class="text-red-600">{{ error() }}</p>
+} @else if (inventory()) {
+  <div class="max-w-md mx-auto mt-8 border rounded-lg p-4 bg-white space-y-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <p class="text-xs text-gray-400">ID do produto</p>
+        <p class="text-sm">{{ inventory()!.productId }}</p>
+      </div>
+      <app-stock-badge [quantity]="inventory()!.quantity" />
+    </div>
+
+    <form [formGroup]="form" class="flex gap-2 items-end">
+      <div class="flex-1">
+        <label class="block text-sm text-gray-600">Quantidade</label>
+        <input
+          formControlName="quantity"
+          type="number"
+          min="1"
+          class="w-full border rounded px-3 py-2"
+        />
+      </div>
+      <button
+        type="button"
+        (click)="increase()"
+        [disabled]="form.invalid"
+        class="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+      >
+        Aumentar
+      </button>
+      <button
+        type="button"
+        (click)="decrease()"
+        [disabled]="form.invalid"
+        class="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+      >
+        Diminuir
+      </button>
+    </form>
+
+    @if (actionError()) {
+      <p class="text-red-600 text-sm">{{ actionError() }}</p>
+    }
+  </div>
+}
