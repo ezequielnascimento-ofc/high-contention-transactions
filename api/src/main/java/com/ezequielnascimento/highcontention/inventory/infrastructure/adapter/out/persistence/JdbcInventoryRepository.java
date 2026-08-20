@@ -1,4 +1,4 @@
-package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.persistence;
+package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.out.persistence;
 
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;

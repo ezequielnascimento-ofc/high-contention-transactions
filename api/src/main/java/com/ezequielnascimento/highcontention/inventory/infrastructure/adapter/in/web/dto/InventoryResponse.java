@@ -1,4 +1,4 @@
-package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.web.dto;
+package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web.dto;
 
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 

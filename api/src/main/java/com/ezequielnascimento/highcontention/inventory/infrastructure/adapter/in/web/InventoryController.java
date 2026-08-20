@@ -1,18 +1,18 @@
-package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.web;
+package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web;
 
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
-import com.ezequielnascimento.highcontention.inventory.domain.port.in.CreateInventoryUseCase;
-import com.ezequielnascimento.highcontention.inventory.domain.port.in.DecreaseStockUseCase;
-import com.ezequielnascimento.highcontention.inventory.domain.port.in.GetInventoryUseCase;
-import com.ezequielnascimento.highcontention.inventory.domain.port.in.IncreaseStockUseCase;
-import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.web.dto.AdjustStockRequest;
-import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.web.dto.CreateInventoryRequest;
-import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.web.dto.InventoryResponse;
+import com.ezequielnascimento.highcontention.inventory.domain.port.in.*;
+import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web.dto.AdjustStockRequest;
+import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web.dto.CreateInventoryRequest;
+import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web.dto.InventoryResponse;
+import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.out.sse.SseInventoryStockNotifier;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
@@ -24,17 +24,26 @@ public class InventoryController {
     private final GetInventoryUseCase getInventoryUseCase;
     private final IncreaseStockUseCase increaseStockUseCase;
     private final DecreaseStockUseCase decreaseStockUseCase;
+    private final SseInventoryStockNotifier sseInventoryStockNotifier;
+    private final GetInventoryByProductIdUseCase getInventoryByProductIdUseCase;
 
     public InventoryController(
             CreateInventoryUseCase createInventoryUseCase,
             GetInventoryUseCase getInventoryUseCase,
             IncreaseStockUseCase increaseStockUseCase,
-            DecreaseStockUseCase decreaseStockUseCase
+            DecreaseStockUseCase decreaseStockUseCase, SseInventoryStockNotifier sseInventoryStockNotifier, GetInventoryByProductIdUseCase getInventoryByProductIdUseCase
     ) {
         this.createInventoryUseCase = createInventoryUseCase;
         this.getInventoryUseCase = getInventoryUseCase;
         this.increaseStockUseCase = increaseStockUseCase;
         this.decreaseStockUseCase = decreaseStockUseCase;
+        this.sseInventoryStockNotifier = sseInventoryStockNotifier;
+        this.getInventoryByProductIdUseCase = getInventoryByProductIdUseCase;
+    }
+
+    @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream(@PathVariable UUID id) {
+        return sseInventoryStockNotifier.subscribe(new InventoryId(id));
     }
 
     @PostMapping
@@ -60,6 +69,12 @@ public class InventoryController {
     public ResponseEntity<InventoryResponse> decrease(
             @PathVariable UUID id, @Valid @RequestBody AdjustStockRequest request) {
         var inventory = decreaseStockUseCase.execute(new InventoryId(id), request.quantity());
+        return ResponseEntity.ok(InventoryResponse.from(inventory));
+    }
+
+    @GetMapping(params = "productId")
+    public ResponseEntity<InventoryResponse> getByProductId(@RequestParam UUID productId) {
+        var inventory = getInventoryByProductIdUseCase.execute(new ProductId(productId));
         return ResponseEntity.ok(InventoryResponse.from(inventory));
     }
 }
