@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,6 +22,8 @@ public class ProductController {
     private final ChangeProductDescriptionUseCase changeProductDescriptionUseCase;
     private final ActivateProductUseCase activateProductUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
+    private final ListProductsUseCase listProductsUseCase; // novo campo
+
 
     public ProductController(
             CreateProductUseCase createProductUseCase,
@@ -29,7 +32,7 @@ public class ProductController {
             ChangeProductPriceUseCase changeProductPriceUseCase,
             ChangeProductDescriptionUseCase changeProductDescriptionUseCase,
             ActivateProductUseCase activateProductUseCase,
-            DeactivateProductUseCase deactivateProductUseCase
+            DeactivateProductUseCase deactivateProductUseCase, ListProductsUseCase listProductsUseCase
     ) {
         this.createProductUseCase = createProductUseCase;
         this.getProductUseCase = getProductUseCase;
@@ -38,6 +41,7 @@ public class ProductController {
         this.changeProductDescriptionUseCase = changeProductDescriptionUseCase;
         this.activateProductUseCase = activateProductUseCase;
         this.deactivateProductUseCase = deactivateProductUseCase;
+        this.listProductsUseCase = listProductsUseCase;
     }
 
     @PostMapping
@@ -83,5 +87,14 @@ public class ProductController {
     public ResponseEntity<ProductResponse> deactivate(@PathVariable UUID id) {
         var product = deactivateProductUseCase.execute(new ProductId(id));
         return ResponseEntity.ok(ProductResponse.from(product));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ProductResponse>> list() {
+        var products = listProductsUseCase.execute()
+                .stream()
+                .map(ProductResponse::from)
+                .toList();
+        return ResponseEntity.ok(products);
     }
 }

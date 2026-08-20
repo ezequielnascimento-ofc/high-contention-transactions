@@ -7,6 +7,7 @@ import com.ezequielnascimento.highcontention.product.domain.port.out.ProductRepo
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -126,5 +127,33 @@ public class JdbcProductRepository implements ProductRepository {
                 """)
                 .param("id", product.id().value())
                 .update();
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return jdbcClient.sql("""
+            SELECT
+                id,
+                name,
+                description,
+                price,
+                status,
+                created_at,
+                updated_at
+            FROM products
+            ORDER BY created_at DESC
+            """)
+                .query((rs, rowNum) -> Product.reconstitute(
+                        new ProductId(UUID.fromString(rs.getString("id"))),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBigDecimal("price"),
+                        rs.getString("status") != null
+                                ? ProductStatus.valueOf(rs.getString("status"))
+                                : null,
+                        rs.getTimestamp("created_at").toInstant(),
+                        rs.getTimestamp("updated_at").toInstant()
+                ))
+                .list();
     }
 }
