@@ -1,0 +1,43 @@
+<div class="border rounded-lg p-4 bg-white">
+  <h3 class="font-semibold mb-3">Resultado das requisições</h3>
+
+  @if (running()) {
+    <p class="text-gray-500 text-sm">Disparando requisições...</p>
+  } @else if (result()) {
+    <div class="space-y-2">
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-green-700">Sucesso</span>
+          <span>{{ result()!.succeeded }} ({{ succeededPct() }}%)</span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded overflow-hidden">
+          <div class="h-full bg-green-500" [style.width.%]="succeededPct()"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-yellow-700">Estoque insuficiente</span>
+          <span>{{ result()!.insufficientStock }} ({{ insufficientPct() }}%)</span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded overflow-hidden">
+          <div class="h-full bg-yellow-500" [style.width.%]="insufficientPct()"></div>
+        </div>
+      </div>
+
+      @if (result()!.otherErrors > 0) {
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-red-700">Outros erros</span>
+            <span>{{ result()!.otherErrors }} ({{ otherPct() }}%)</span>
+          </div>
+          <div class="h-2 bg-gray-100 rounded overflow-hidden">
+            <div class="h-full bg-red-500" [style.width.%]="otherPct()"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-gray-400 text-sm">Nenhum teste executado ainda.</p>
+  }
+</div>

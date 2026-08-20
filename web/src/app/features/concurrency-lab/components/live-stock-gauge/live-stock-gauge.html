@@ -1,0 +1,17 @@
+<div class="border rounded-lg p-4 bg-white text-center">
+  <div class="flex items-center justify-center gap-2 text-xs text-gray-400 mb-2">
+    <span
+      class="w-2 h-2 rounded-full"
+      [class.bg-green-500]="connected()"
+      [class.bg-gray-300]="!connected()"
+    ></span>
+    {{ connected() ? 'Conectado (SSE)' : 'Desconectado' }}
+  </div>
+
+  @if (quantity() !== null) {
+    <p class="text-5xl font-bold transition-all duration-200">{{ quantity() }}</p>
+    <p class="text-sm text-gray-500 mt-1">unidades em estoque</p>
+  } @else {
+    <p class="text-gray-400">Aguardando dados...</p>
+  }
+</div>

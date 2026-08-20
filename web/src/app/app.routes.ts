@@ -11,12 +11,12 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/inventory/inventory.routes').then((m) => m.inventoryRoutes),
   },
-  //   {
-  //     path: 'concurrency-lab',
-  //     loadChildren: () =>
-  //       import('./features/concurrency-lab/concurrency-lab.routes').then(
-  //         (m) => m.concurrencyLabRoutes,
-  //       ),
-  //   },
+  {
+    path: 'concurrency-lab',
+    loadChildren: () =>
+      import('./features/concurrency-lab/concurrency-lab.routes').then(
+        (m) => m.concurrencyLabRoutes,
+      ),
+  },
   { path: '**', redirectTo: 'products' },
 ];
