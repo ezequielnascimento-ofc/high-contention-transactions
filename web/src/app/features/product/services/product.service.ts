@@ -42,4 +42,8 @@ export class ProductService {
   deactivate(id: string): Observable<Product> {
     return this.http.post<Product>(`${this.baseUrl}/${id}/deactivate`, {});
   }
+
+  getAll(): Observable<Product[]> {
+    return this.http.get<Product[]>(this.baseUrl);
+  }
 }

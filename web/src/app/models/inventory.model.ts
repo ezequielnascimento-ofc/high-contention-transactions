@@ -14,3 +14,9 @@ export interface CreateInventoryRequest {
 export interface AdjustStockRequest {
   quantity: number;
 }
+
+export interface StockUpdateEvent {
+  inventoryId: string;
+  quantity: number;
+  timestamp: string;
+}

@@ -3,5 +3,21 @@
 } @else if (error()) {
   <p class="text-red-600">{{ error() }}</p>
 } @else if (product()) {
-  <app-product-card [product]="product()!" (activateToggled)="toggleActivation()" />
+  <div class="max-w-md mx-auto mt-8 space-y-4">
+    <app-product-card [product]="product()!" (activateToggled)="toggleActivation()" />
+
+    @if (inventory()) {
+      <div class="border rounded-lg p-4 bg-white flex justify-between items-center">
+        <app-stock-badge [quantity]="inventory()!.quantity" />
+        <button
+          (click)="goToStockAdjust()"
+          class="text-sm px-3 py-1 border rounded hover:bg-gray-50"
+        >
+          Ajustar estoque
+        </button>
+      </div>
+    } @else {
+      <app-inventory-form [productId]="product()!.id" (submitted)="onCreateInventory($event)" />
+    }
+  </div>
 }

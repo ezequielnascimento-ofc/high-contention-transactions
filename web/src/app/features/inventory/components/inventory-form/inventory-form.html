@@ -1,0 +1,19 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="border rounded-lg p-4 bg-white space-y-3">
+  <h3 class="font-semibold">Este produto ainda não tem estoque</h3>
+  <div>
+    <label class="block text-sm text-gray-600">Quantidade inicial</label>
+    <input
+      formControlName="quantity"
+      type="number"
+      min="0"
+      class="w-full border rounded px-3 py-2"
+    />
+  </div>
+  <button
+    type="submit"
+    [disabled]="form.invalid"
+    class="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+  >
+    Criar estoque
+  </button>
+</form>

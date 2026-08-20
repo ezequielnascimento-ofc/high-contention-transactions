@@ -1,16 +1,19 @@
-<div class="max-w-md mx-auto space-y-6 mt-8">
-  <div class="border rounded-lg p-4 bg-white">
-    <h3 class="font-semibold mb-2">Buscar produto por ID</h3>
-    <div class="flex gap-2">
-      <input #idInput placeholder="UUID do produto" class="flex-1 border rounded px-3 py-2" />
-      <button (click)="onSearch(idInput.value)" class="bg-gray-800 text-white px-4 py-2 rounded">
-        Buscar
-      </button>
-    </div>
-    <p class="text-xs text-gray-400 mt-2">
-      Listagem completa em breve — busca por ID por enquanto.
-    </p>
-  </div>
-
+<div class="max-w-4xl mx-auto mt-8 space-y-6">
   <app-product-form (submitted)="onCreate($event)" />
+
+  @if (loading()) {
+    <p class="text-gray-500">Carregando produtos...</p>
+  } @else if (error()) {
+    <p class="text-red-600">{{ error() }}</p>
+  } @else if (products().length === 0) {
+    <p class="text-gray-400">Nenhum produto cadastrado ainda.</p>
+  } @else {
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      @for (product of products(); track product.id) {
+        <div (click)="openDetail(product)" class="cursor-pointer">
+          <app-product-card [product]="product" />
+        </div>
+      }
+    </div>
+  }
 </div>
