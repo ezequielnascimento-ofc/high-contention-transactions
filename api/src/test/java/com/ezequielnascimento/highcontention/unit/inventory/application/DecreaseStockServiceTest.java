@@ -7,6 +7,7 @@ import com.ezequielnascimento.highcontention.inventory.domain.exceptions.Invento
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
+import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryStockNotifier;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class DecreaseStockServiceTest {
 
     @Mock
     private InventoryRepository inventoryRepository;
+
+    @Mock
+    private InventoryStockNotifier inventoryStockNotifier;
 
     @InjectMocks
     private DecreaseStockService decreaseStockService;
