@@ -80,7 +80,7 @@ public class Product {
     }
 
     public void changeDescription(String description) {
-        // description é opcional por design — null/blank são valores válidos
+        // description is optional by design: null and blank are valid values
         this.description = description;
         touch();
     }

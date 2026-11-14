@@ -72,7 +72,7 @@ public class SseInventoryStockNotifier implements InventoryStockNotifier {
                     .data(payload));
         } catch (IOException | IllegalStateException e) {
             log.debug("Removing dead SSE emitter for inventory {}: {}", inventoryId.value(), e.getMessage());
-            emitter.complete(); // trocado de completeWithError(e)
+            emitter.complete(); // complete normally: a dead client is not a server error
             removeEmitter(inventoryId, emitter);
         }
     }

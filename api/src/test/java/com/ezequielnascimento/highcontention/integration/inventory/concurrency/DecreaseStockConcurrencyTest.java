@@ -49,7 +49,7 @@ class DecreaseStockConcurrencyTest {
         }
     }
 
-    @ParameterizedTest(name = "com {0} threads concorrentes")
+    @ParameterizedTest(name = "{0} concurrent decrement tasks")
     @ValueSource(ints = {10, 100, 1000, 10000})
     void shouldNeverAllowStockToGoNegativeUnderConcurrentDecrease(int threadCount) throws InterruptedException {
         int initialStock = threadCount / 2;
@@ -85,18 +85,18 @@ class DecreaseStockConcurrencyTest {
         boolean completedInTime = doneLatch.await(2, TimeUnit.MINUTES);
         executor.shutdown();
 
-        assertTrue(completedInTime, "Nem todas as threads terminaram dentro do tempo limite");
+        assertTrue(completedInTime, "Not all tasks finished within the timeout");
         assertEquals(0, unexpectedErrorCount.get(),
-                "Houve exceções inesperadas (não InsufficientStockException) durante a execução concorrente");
+                "Unexpected exceptions (other than InsufficientStockException) during concurrent execution");
 
         assertEquals(initialStock, successCount.get(),
-                "Número de decrementos bem-sucedidos deveria ser igual ao estoque inicial");
+                "Successful decrements must equal the initial stock");
         assertEquals(threadCount - initialStock, insufficientStockCount.get(),
-                "Número de falhas por estoque insuficiente deveria completar o total de threads");
+                "Insufficient-stock failures must account for every remaining task");
 
         Inventory finalInventory = inventoryRepository.findById(inventory.id()).orElseThrow();
         assertEquals(0, finalInventory.quantity(),
-                "Estoque final deveria ser exatamente zero, nunca negativo (overselling)");
+                "Final stock must be exactly zero, never negative (no overselling)");
     }
 
     private void setUpInventoryWithStock(int quantity) {
