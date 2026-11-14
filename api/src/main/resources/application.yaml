@@ -9,3 +9,18 @@ springdoc:
   swagger-ui:
     operations-sorter: method
     tags-sorter: alpha
+
+inventory:
+  concurrency:
+    # atomic | pessimistic | optimistic | serializable
+    strategy: atomic
+    # Retrying strategies (optimistic, serializable) only
+    max-attempts: 10
+    base-backoff: 2ms
+    max-backoff: 50ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics

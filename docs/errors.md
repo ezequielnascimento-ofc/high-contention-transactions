@@ -22,6 +22,7 @@ Every error is returned as [RFC 9457 Problem Details](https://www.rfc-editor.org
 | [invalid-request](#invalid-request) | 400 | The domain rejected the values (for example, a non-positive quantity) |
 | [resource-not-found](#resource-not-found) | 404 | The product, the inventory or the route does not exist |
 | [insufficient-stock](#insufficient-stock) | 409 | A decrease asked for more than the available stock |
+| [concurrency-conflict](#concurrency-conflict) | 409 | A retrying strategy gave up after repeated concurrent updates |
 | [inventory-already-exists](#inventory-already-exists) | 409 | The product already has an inventory |
 | [unknown-product](#unknown-product) | 422 | An inventory refers to a product that does not exist |
 | [internal-error](#internal-error) | 500 | Anything else; the detail never exposes internals |
@@ -47,6 +48,9 @@ The resource in the URL does not exist, or there is no endpoint for that method 
 
 ## insufficient-stock
 The decrease was refused and the stock was left unchanged. Retrying the same request will fail again unless the stock grows.
+
+## concurrency-conflict
+Only with the `optimistic` or `serializable` strategy. The decrease lost to concurrent writers on every one of `inventory.concurrency.max-attempts` tries and gave up; the stock was left unchanged. Unlike `insufficient-stock`, retrying later can succeed.
 
 ## inventory-already-exists
 Each product has at most one inventory, enforced by a unique constraint. When two requests create it at the same time, exactly one succeeds and the other receives this problem.

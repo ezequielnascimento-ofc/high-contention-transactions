@@ -1,39 +1,39 @@
 package com.ezequielnascimento.highcontention.unit.inventory.application;
 
 import com.ezequielnascimento.highcontention.inventory.application.DecreaseStockService;
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.ConcurrencyConflictException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InsufficientStockException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
-import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
-import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryStockNotifier;
+import com.ezequielnascimento.highcontention.inventory.domain.port.out.StockDecrementer;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DecreaseStockServiceTest {
 
     @Mock
-    private InventoryRepository inventoryRepository;
-
+    private StockDecrementer stockDecrementer;
     @Mock
     private InventoryStockNotifier inventoryStockNotifier;
-
     @InjectMocks
     private DecreaseStockService decreaseStockService;
 
@@ -41,86 +41,62 @@ class DecreaseStockServiceTest {
     class SuccessfulDecrease {
 
         @Test
-        void shouldDecreaseStockAndReturnUpdatedInventory() {
-            Inventory inventory = Inventory.create(ProductId.generate(), 100);
-            Inventory updated = Inventory.reconstitute(
-                    inventory.id(), inventory.productId(), 70, inventory.createdAt(), inventory.updatedAt());
+        void shouldReturnTheInventoryCommittedByTheDecrementer() {
+            Inventory updated = Inventory.create(ProductId.generate(), 70);
+            when(stockDecrementer.decrement(updated.id(), 30)).thenReturn(updated);
 
-            when(inventoryRepository.decreaseQuantity(inventory.id(), 30)).thenReturn(true);
-            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(updated));
-
-            Inventory result = decreaseStockService.execute(inventory.id(), 30);
+            Inventory result = decreaseStockService.execute(updated.id(), 30);
 
             assertEquals(70, result.quantity());
         }
 
         @Test
-        void shouldCallDecreaseQuantityOnRepository() {
-            InventoryId inventoryId = InventoryId.generate();
+        void shouldNotifySubscribersWithTheNewQuantity() {
             Inventory updated = Inventory.create(ProductId.generate(), 70);
+            when(stockDecrementer.decrement(updated.id(), 30)).thenReturn(updated);
 
-            when(inventoryRepository.decreaseQuantity(inventoryId, 30)).thenReturn(true);
-            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.of(updated));
+            decreaseStockService.execute(updated.id(), 30);
 
-            decreaseStockService.execute(inventoryId, 30);
-
-            verify(inventoryRepository).decreaseQuantity(inventoryId, 30);
+            verify(inventoryStockNotifier).notifyStockChanged(updated.id(), 70);
         }
     }
 
     @Nested
     class QuantityValidation {
 
-        @Test
-        void shouldRejectZeroAsDecreaseAmount() {
+        @ParameterizedTest(name = "quantity {0}")
+        @ValueSource(ints = {0, -1})
+        void shouldRejectNonPositiveQuantitiesWithoutTouchingTheStock(int quantity) {
             InventoryId inventoryId = InventoryId.generate();
 
-            assertThrows(InvalidInventoryException.class,
-                    () -> decreaseStockService.execute(inventoryId, 0));
+            assertThrows(InvalidInventoryException.class, () -> decreaseStockService.execute(inventoryId, quantity));
 
-            verify(inventoryRepository, never())
-                    .decreaseQuantity(ArgumentMatchers.any(), ArgumentMatchers.anyInt());
-        }
-
-        @Test
-        void shouldRejectNegativeDecreaseAmount() {
-            InventoryId inventoryId = InventoryId.generate();
-
-            assertThrows(InvalidInventoryException.class,
-                    () -> decreaseStockService.execute(inventoryId, -1));
-
-            verify(inventoryRepository, never())
-                    .decreaseQuantity(ArgumentMatchers.any(), ArgumentMatchers.anyInt());
+            verifyNoInteractions(stockDecrementer, inventoryStockNotifier);
         }
     }
 
     @Nested
-    class WhenStockIsInsufficient {
+    class WhenTheDecreaseIsRefused {
 
         @Test
-        void shouldThrowInsufficientStockExceptionWithCurrentAndRequestedAmounts() {
-            Inventory inventory = Inventory.create(ProductId.generate(), 100);
-
-            when(inventoryRepository.decreaseQuantity(inventory.id(), 150)).thenReturn(false);
-            when(inventoryRepository.findById(inventory.id())).thenReturn(Optional.of(inventory));
-
-            assertThrows(InsufficientStockException.class,
-                    () -> decreaseStockService.execute(inventory.id(), 150));
-        }
-    }
-
-    @Nested
-    class WhenInventoryDoesNotExist {
-
-        @Test
-        void shouldThrowInventoryNotFoundException() {
+        void shouldPropagateInsufficientStockAndNotNotify() {
             InventoryId inventoryId = InventoryId.generate();
+            when(stockDecrementer.decrement(inventoryId, 150))
+                    .thenThrow(new InsufficientStockException(inventoryId, 100, 150));
 
-            when(inventoryRepository.decreaseQuantity(inventoryId, 30)).thenReturn(false);
-            when(inventoryRepository.findById(inventoryId)).thenReturn(Optional.empty());
+            assertThrows(InsufficientStockException.class, () -> decreaseStockService.execute(inventoryId, 150));
 
-            assertThrows(InventoryNotFoundException.class,
-                    () -> decreaseStockService.execute(inventoryId, 30));
+            verify(inventoryStockNotifier, never()).notifyStockChanged(any(), anyInt());
+        }
+
+        @Test
+        void shouldPropagateConcurrencyConflictAndNotNotify() {
+            InventoryId inventoryId = InventoryId.generate();
+            when(stockDecrementer.decrement(inventoryId, 1)).thenThrow(new ConcurrencyConflictException(inventoryId, 10));
+
+            assertThrows(ConcurrencyConflictException.class, () -> decreaseStockService.execute(inventoryId, 1));
+
+            verify(inventoryStockNotifier, never()).notifyStockChanged(any(), anyInt());
         }
     }
 }

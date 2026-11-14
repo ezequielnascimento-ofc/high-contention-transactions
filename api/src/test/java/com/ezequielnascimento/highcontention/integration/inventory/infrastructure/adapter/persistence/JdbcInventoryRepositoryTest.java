@@ -212,55 +212,6 @@ class JdbcInventoryRepositoryTest {
     }
 
     @Nested
-    class DecreaseQuantity {
-
-        @Test
-        void shouldDecreaseQuantityAndReturnTrueWhenStockIsSufficient() {
-            Inventory inventory = createAndTrack(100);
-            repository.save(inventory);
-
-            boolean decreased = repository.decreaseQuantity(inventory.id(), 30);
-
-            assertTrue(decreased);
-            Inventory found = repository.findById(inventory.id()).orElseThrow();
-            assertEquals(70, found.quantity());
-        }
-
-        @Test
-        void shouldReturnFalseAndKeepQuantityUnchangedWhenStockIsInsufficient() {
-            Inventory inventory = createAndTrack(100);
-            repository.save(inventory);
-
-            boolean decreased = repository.decreaseQuantity(inventory.id(), 150);
-
-            assertFalse(decreased);
-            Inventory found = repository.findById(inventory.id()).orElseThrow();
-            assertEquals(100, found.quantity());
-        }
-
-        @Test
-        void shouldReturnFalseWhenInventoryDoesNotExist() {
-            InventoryId nonExistentId = InventoryId.generate();
-
-            boolean decreased = repository.decreaseQuantity(nonExistentId, 10);
-
-            assertFalse(decreased);
-        }
-
-        @Test
-        void shouldAllowDecreaseThatExactlyZeroesQuantity() {
-            Inventory inventory = createAndTrack(100);
-            repository.save(inventory);
-
-            boolean decreased = repository.decreaseQuantity(inventory.id(), 100);
-
-            assertTrue(decreased);
-            Inventory found = repository.findById(inventory.id()).orElseThrow();
-            assertEquals(0, found.quantity());
-        }
-    }
-
-    @Nested
     class Delete {
 
         @Test

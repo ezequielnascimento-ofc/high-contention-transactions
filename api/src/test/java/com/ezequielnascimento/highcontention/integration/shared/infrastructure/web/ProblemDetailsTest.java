@@ -1,5 +1,6 @@
 package com.ezequielnascimento.highcontention.integration.shared.infrastructure.web;
 
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.ConcurrencyConflictException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InsufficientStockException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryAlreadyExistsException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.UnknownProductException;
@@ -95,6 +96,17 @@ class ProblemDetailsTest {
                         .content("{\"quantity\":5}")),
                 409, "insufficient-stock")
                 .andExpect(jsonPath("$.instance").value("/api/v1/inventories/" + id.value() + "/decrease"));
+    }
+
+    @Test
+    void retriesExhaustedIs409ConcurrencyConflict() throws Exception {
+        InventoryId id = InventoryId.generate();
+        when(decreaseStockUseCase.execute(id, 1)).thenThrow(new ConcurrencyConflictException(id, 10));
+
+        expectProblem(mockMvc.perform(post("/api/v1/inventories/{id}/decrease", id.value())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"quantity\":1}")),
+                409, "concurrency-conflict");
     }
 
     @Test
