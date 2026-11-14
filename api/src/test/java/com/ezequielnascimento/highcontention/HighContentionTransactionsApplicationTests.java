@@ -1,9 +1,9 @@
 package com.ezequielnascimento.highcontention;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import com.ezequielnascimento.highcontention.support.IntegrationTest;
 
-@SpringBootTest
+@IntegrationTest
 class HighContentionTransactionsApplicationTests {
 
 	@Test

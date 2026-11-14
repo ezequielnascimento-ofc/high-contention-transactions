@@ -1,5 +1,7 @@
 package com.ezequielnascimento.highcontention.integration.inventory.infrastructure.adapter.persistence;
 
+import com.ezequielnascimento.highcontention.support.IntegrationTest;
+
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
@@ -11,8 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -21,8 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IntegrationTest
 class JdbcInventoryRepositoryTest {
 
     @Autowired

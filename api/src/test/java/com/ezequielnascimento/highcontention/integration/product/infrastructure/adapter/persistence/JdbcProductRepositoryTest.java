@@ -1,5 +1,7 @@
 package com.ezequielnascimento.highcontention.integration.product.infrastructure.adapter.persistence;
 
+import com.ezequielnascimento.highcontention.support.IntegrationTest;
+
 import com.ezequielnascimento.highcontention.product.domain.model.Product;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import com.ezequielnascimento.highcontention.product.domain.port.out.ProductRepository;
@@ -7,8 +9,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -16,8 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IntegrationTest
 class JdbcProductRepositoryTest {
 
     @Autowired

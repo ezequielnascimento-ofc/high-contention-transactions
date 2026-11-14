@@ -1,5 +1,7 @@
 package com.ezequielnascimento.highcontention.integration.inventory.application;
 
+import com.ezequielnascimento.highcontention.support.IntegrationTest;
+
 import com.ezequielnascimento.highcontention.inventory.application.GetInventoryService;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryNotFoundException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
@@ -12,8 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -22,8 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IntegrationTest
 class GetInventoryIntegrationTest {
 
     @Autowired
