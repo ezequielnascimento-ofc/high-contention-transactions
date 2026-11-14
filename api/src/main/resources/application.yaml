@@ -1,3 +1,11 @@
 spring:
   application:
     name: High Contention Transactions
+
+springdoc:
+  # Error responses are declared per operation (OpenApiConfig), not copied
+  # from every @ExceptionHandler onto every endpoint.
+  override-with-generic-response: false
+  swagger-ui:
+    operations-sorter: method
+    tags-sorter: alpha
