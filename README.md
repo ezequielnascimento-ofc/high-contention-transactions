@@ -10,6 +10,8 @@
 
 # High-Contention Transactions
 
+[![CI](https://github.com/ezequielnascimento-ofc/high-contention-transactions/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ezequielnascimento-ofc/high-contention-transactions/actions/workflows/ci.yml)
+
 > Engineering transactional systems under high contention.
 
 A Spring Boot project built to answer a concrete question: **can a system correctly handle thousands of concurrent requests competing for the same resource, without overselling or losing updates?**
