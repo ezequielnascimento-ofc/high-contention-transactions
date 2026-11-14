@@ -79,8 +79,8 @@ public class InventoryController {
         return ResponseEntity.ok(InventoryResponse.from(inventory));
     }
 
-    @Operation(summary = "Decrease stock", description = "The contended operation. A single conditional UPDATE decreases the stock only if enough is available, so concurrent requests can never oversell.")
-    @ApiResponse(responseCode = "409", description = "Not enough stock; nothing was changed (insufficient-stock)",
+    @Operation(summary = "Decrease stock", description = "The contended operation. How concurrent requests are kept from overselling depends on inventory.concurrency.strategy: atomic (default, one conditional UPDATE), pessimistic, optimistic or serializable. See docs/adr.")
+    @ApiResponse(responseCode = "409", description = "Nothing was changed: not enough stock (insufficient-stock), or a retrying strategy gave up after repeated conflicts (concurrency-conflict)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(ref = "#/components/schemas/Problem")))
     @PostMapping("/{id}/decrease")
     public ResponseEntity<InventoryResponse> decrease(

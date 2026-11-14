@@ -1,5 +1,6 @@
 package com.ezequielnascimento.highcontention.shared.infrastructure.web;
 
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.ConcurrencyConflictException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InsufficientStockException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InvalidInventoryException;
 import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryAlreadyExistsException;
@@ -59,6 +60,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InsufficientStockException.class)
     ProblemDetail handleInsufficientStock(InsufficientStockException ex) {
         return problem(HttpStatus.CONFLICT, "insufficient-stock", "Insufficient stock", ex.getMessage());
+    }
+
+    @ExceptionHandler(ConcurrencyConflictException.class)
+    ProblemDetail handleConcurrencyConflict(ConcurrencyConflictException ex) {
+        return problem(HttpStatus.CONFLICT, "concurrency-conflict", "Concurrency conflict", ex.getMessage());
     }
 
     @ExceptionHandler(InventoryAlreadyExistsException.class)
