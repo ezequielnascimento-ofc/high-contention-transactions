@@ -90,7 +90,7 @@ class ProductControllerTest {
                             .contentType("application/json")
                             .content(requestBody))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.details").isNotEmpty());
+                    .andExpect(jsonPath("$.errors[0].field").value("name"));
         }
 
         @Test

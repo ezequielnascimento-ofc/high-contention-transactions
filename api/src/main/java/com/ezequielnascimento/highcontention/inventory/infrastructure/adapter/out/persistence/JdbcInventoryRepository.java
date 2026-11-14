@@ -1,19 +1,27 @@
 package com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.out.persistence;
 
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.InventoryAlreadyExistsException;
+import com.ezequielnascimento.highcontention.inventory.domain.exceptions.UnknownProductException;
 import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Optional;
-import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 import java.util.UUID;
+
+import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 
 @Repository
 public class JdbcInventoryRepository implements InventoryRepository {
+
+    private static final String UNIQUE_VIOLATION = "23505";
+    private static final String FOREIGN_KEY_VIOLATION = "23503";
 
     private final JdbcClient jdbcClient;
 
@@ -41,29 +49,32 @@ public class JdbcInventoryRepository implements InventoryRepository {
             return inventory;
         }
 
-        jdbcClient.sql("""
-            INSERT INTO inventory (
-                id,
-                product_id,
-                quantity,
-                created_at,
-                updated_at
-            )
-            VALUES (
-                :id,
-                :productId,
-                :quantity,
-                :createdAt,
-                :updatedAt
-            )
-            """)
-                .param("id", inventory.id().value())
-                .param("productId", inventory.productId().value())
-                .param("quantity", inventory.quantity())
-                .param("createdAt", utc(inventory.createdAt()))
-                .param("updatedAt", utc(inventory.updatedAt()))
-                .update();
-
+        try {
+            jdbcClient.sql("""
+                INSERT INTO inventory (
+                    id,
+                    product_id,
+                    quantity,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    :id,
+                    :productId,
+                    :quantity,
+                    :createdAt,
+                    :updatedAt
+                )
+                """)
+                    .param("id", inventory.id().value())
+                    .param("productId", inventory.productId().value())
+                    .param("quantity", inventory.quantity())
+                    .param("createdAt", utc(inventory.createdAt()))
+                    .param("updatedAt", utc(inventory.updatedAt()))
+                    .update();
+        } catch (DataIntegrityViolationException e) {
+            throw translateInsertViolation(e, inventory);
+        }
         return inventory;
     }
 
@@ -182,5 +193,29 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 .param("id", id.value())
                 .query(Boolean.class)
                 .single();
+    }
+
+    /**
+     * Turns constraint violations on INSERT into domain exceptions. The SQLSTATE
+     * codes are standard, so the adapter does not depend on the driver's classes.
+     */
+    private static RuntimeException translateInsertViolation(DataIntegrityViolationException e, Inventory inventory) {
+        String sqlState = sqlState(e);
+        if (UNIQUE_VIOLATION.equals(sqlState)) {
+            return new InventoryAlreadyExistsException(inventory.productId());
+        }
+        if (FOREIGN_KEY_VIOLATION.equals(sqlState)) {
+            return new UnknownProductException(inventory.productId());
+        }
+        return e;
+    }
+
+    private static String sqlState(Throwable throwable) {
+        for (Throwable t = throwable; t != null; t = t.getCause()) {
+            if (t instanceof SQLException sqlException) {
+                return sqlException.getSQLState();
+            }
+        }
+        return null;
     }
 }
