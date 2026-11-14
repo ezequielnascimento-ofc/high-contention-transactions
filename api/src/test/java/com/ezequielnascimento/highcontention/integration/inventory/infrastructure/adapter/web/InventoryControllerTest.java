@@ -6,6 +6,7 @@ import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.in.CreateInventoryUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.in.DecreaseStockUseCase;
+import com.ezequielnascimento.highcontention.inventory.domain.port.in.GetInventoryByProductIdUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.in.GetInventoryUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.in.IncreaseStockUseCase;
 import com.ezequielnascimento.highcontention.inventory.infrastructure.adapter.in.web.InventoryController;
@@ -44,6 +45,8 @@ class InventoryControllerTest {
     private IncreaseStockUseCase increaseStockUseCase;
     @MockitoBean
     private DecreaseStockUseCase decreaseStockUseCase;
+    @MockitoBean
+    private GetInventoryByProductIdUseCase getInventoryByProductIdUseCase;
 
     private Inventory sampleInventory(int quantity) {
         return Inventory.create(ProductId.generate(), quantity);
@@ -109,6 +112,30 @@ class InventoryControllerTest {
             when(getInventoryUseCase.execute(id)).thenThrow(new InventoryNotFoundException(id));
 
             mockMvc.perform(get("/api/v1/inventories/{id}", id.value()))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    class GetByProductId {
+
+        @Test
+        void shouldReturn200WithInventoryForTheGivenProduct() throws Exception {
+            Inventory inventory = sampleInventory(42);
+            when(getInventoryByProductIdUseCase.execute(inventory.productId())).thenReturn(inventory);
+
+            mockMvc.perform(get("/api/v1/inventories").param("productId", inventory.productId().value().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.productId").value(inventory.productId().value().toString()))
+                    .andExpect(jsonPath("$.quantity").value(42));
+        }
+
+        @Test
+        void shouldReturn404WhenTheProductHasNoInventory() throws Exception {
+            ProductId productId = ProductId.generate();
+            when(getInventoryByProductIdUseCase.execute(productId)).thenThrow(new InventoryNotFoundException(productId));
+
+            mockMvc.perform(get("/api/v1/inventories").param("productId", productId.value().toString()))
                     .andExpect(status().isNotFound());
         }
     }
