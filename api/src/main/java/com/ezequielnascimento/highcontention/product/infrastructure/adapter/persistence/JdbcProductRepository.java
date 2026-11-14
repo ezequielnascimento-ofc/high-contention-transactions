@@ -9,8 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 import java.util.UUID;
+
+import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 
 @Repository
 public class JdbcProductRepository implements ProductRepository {
