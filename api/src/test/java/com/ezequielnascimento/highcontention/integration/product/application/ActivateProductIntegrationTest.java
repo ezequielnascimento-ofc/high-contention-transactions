@@ -1,5 +1,7 @@
 package com.ezequielnascimento.highcontention.integration.product.application;
 
+import com.ezequielnascimento.highcontention.support.IntegrationTest;
+
 import com.ezequielnascimento.highcontention.product.application.ActivateProductService;
 import com.ezequielnascimento.highcontention.product.domain.exceptions.ProductNotFoundException;
 import com.ezequielnascimento.highcontention.product.domain.model.Product;
@@ -9,16 +11,13 @@ import com.ezequielnascimento.highcontention.product.domain.port.out.ProductRepo
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IntegrationTest
 class ActivateProductIntegrationTest {
 
     @Autowired
