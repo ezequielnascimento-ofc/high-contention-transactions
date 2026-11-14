@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 import java.util.UUID;
 
 @Repository
@@ -38,7 +39,7 @@ public class JdbcProductRepository implements ProductRepository {
                     .param("description", product.description())
                     .param("price", product.price())
                     .param("status", product.status().name())
-                    .param("updatedAt", product.updatedAt())
+                    .param("updatedAt", utc(product.updatedAt()))
                     .update();
 
             return product;
@@ -69,8 +70,8 @@ public class JdbcProductRepository implements ProductRepository {
                 .param("description", product.description())
                 .param("price", product.price())
                 .param("status", product.status().name())
-                .param("createdAt", product.createdAt())
-                .param("updatedAt", product.updatedAt())
+                .param("createdAt", utc(product.createdAt()))
+                .param("updatedAt", utc(product.updatedAt()))
                 .update();
 
         return product;
