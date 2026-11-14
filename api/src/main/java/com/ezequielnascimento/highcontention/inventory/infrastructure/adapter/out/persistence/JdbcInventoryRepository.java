@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
+import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 import java.util.UUID;
 
 @Repository
@@ -34,7 +35,7 @@ public class JdbcInventoryRepository implements InventoryRepository {
                     .param("id", inventory.id().value())
                     .param("productId", inventory.productId().value())
                     .param("quantity", inventory.quantity())
-                    .param("updatedAt", inventory.updatedAt())
+                    .param("updatedAt", utc(inventory.updatedAt()))
                     .update();
 
             return inventory;
@@ -59,8 +60,8 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 .param("id", inventory.id().value())
                 .param("productId", inventory.productId().value())
                 .param("quantity", inventory.quantity())
-                .param("createdAt", inventory.createdAt())
-                .param("updatedAt", inventory.updatedAt())
+                .param("createdAt", utc(inventory.createdAt()))
+                .param("updatedAt", utc(inventory.updatedAt()))
                 .update();
 
         return inventory;
@@ -137,7 +138,7 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 """)
                 .param("id", id.value())
                 .param("quantity", quantity)
-                .param("updatedAt", Instant.now())
+                .param("updatedAt", utc(Instant.now()))
                 .update();
 
         return affectedRows > 0;
@@ -154,7 +155,7 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 """)
                 .param("id", id.value())
                 .param("quantity", quantity)
-                .param("updatedAt", Instant.now())
+                .param("updatedAt", utc(Instant.now()))
                 .update();
 
         return affectedRows > 0;
