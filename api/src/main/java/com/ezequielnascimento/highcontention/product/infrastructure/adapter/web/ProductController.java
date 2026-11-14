@@ -22,7 +22,7 @@ public class ProductController {
     private final ChangeProductDescriptionUseCase changeProductDescriptionUseCase;
     private final ActivateProductUseCase activateProductUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
-    private final ListProductsUseCase listProductsUseCase; // novo campo
+    private final ListProductsUseCase listProductsUseCase;
 
 
     public ProductController(
@@ -32,7 +32,8 @@ public class ProductController {
             ChangeProductPriceUseCase changeProductPriceUseCase,
             ChangeProductDescriptionUseCase changeProductDescriptionUseCase,
             ActivateProductUseCase activateProductUseCase,
-            DeactivateProductUseCase deactivateProductUseCase, ListProductsUseCase listProductsUseCase
+            DeactivateProductUseCase deactivateProductUseCase,
+            ListProductsUseCase listProductsUseCase
     ) {
         this.createProductUseCase = createProductUseCase;
         this.getProductUseCase = getProductUseCase;
