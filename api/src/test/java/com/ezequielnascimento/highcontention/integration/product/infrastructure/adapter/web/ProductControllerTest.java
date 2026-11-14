@@ -10,6 +10,7 @@ import com.ezequielnascimento.highcontention.product.domain.port.in.ChangeProduc
 import com.ezequielnascimento.highcontention.product.domain.port.in.CreateProductUseCase;
 import com.ezequielnascimento.highcontention.product.domain.port.in.DeactivateProductUseCase;
 import com.ezequielnascimento.highcontention.product.domain.port.in.GetProductUseCase;
+import com.ezequielnascimento.highcontention.product.domain.port.in.ListProductsUseCase;
 import com.ezequielnascimento.highcontention.product.domain.port.in.RenameProductUseCase;
 import com.ezequielnascimento.highcontention.product.infrastructure.adapter.web.ProductController;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -50,6 +52,8 @@ class ProductControllerTest {
     private ActivateProductUseCase activateProductUseCase;
     @MockitoBean
     private DeactivateProductUseCase deactivateProductUseCase;
+    @MockitoBean
+    private ListProductsUseCase listProductsUseCase;
 
     private Product sampleProduct() {
         return Product.create("Mechanical Keyboard", "High-performance mechanical keyboard", new BigDecimal("499.90"));
@@ -123,6 +127,32 @@ class ProductControllerTest {
             mockMvc.perform(get("/api/v1/products/{id}", id.value()))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404));
+        }
+    }
+
+    @Nested
+    class ListAll {
+
+        @Test
+        void shouldReturn200WithAllProducts() throws Exception {
+            Product first = sampleProduct();
+            Product second = sampleProduct();
+            when(listProductsUseCase.execute()).thenReturn(List.of(first, second));
+
+            mockMvc.perform(get("/api/v1/products"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].id").value(first.id().value().toString()))
+                    .andExpect(jsonPath("$[1].id").value(second.id().value().toString()));
+        }
+
+        @Test
+        void shouldReturn200WithEmptyListWhenThereAreNoProducts() throws Exception {
+            when(listProductsUseCase.execute()).thenReturn(List.of());
+
+            mockMvc.perform(get("/api/v1/products"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
         }
     }
 
