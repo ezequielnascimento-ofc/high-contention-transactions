@@ -6,22 +6,23 @@ import com.ezequielnascimento.highcontention.inventory.domain.model.Inventory;
 import com.ezequielnascimento.highcontention.inventory.domain.model.InventoryId;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
+import com.ezequielnascimento.highcontention.shared.infrastructure.persistence.SqlStates;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.ezequielnascimento.highcontention.shared.infrastructure.persistence.JdbcTimestamps.utc;
 
+/**
+ * Inventory persistence. Every statement that writes a row increments its
+ * {@code version}, so optimistic decrements never overwrite another write.
+ * Decreases live in the {@code StockDecrementer} adapters.
+ */
 @Repository
 public class JdbcInventoryRepository implements InventoryRepository {
-
-    private static final String UNIQUE_VIOLATION = "23505";
-    private static final String FOREIGN_KEY_VIOLATION = "23503";
 
     private final JdbcClient jdbcClient;
 
@@ -37,6 +38,7 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 SET
                     product_id = :productId,
                     quantity = :quantity,
+                    version = version + 1,
                     updated_at = :updatedAt
                 WHERE id = :id
                 """)
@@ -45,26 +47,13 @@ public class JdbcInventoryRepository implements InventoryRepository {
                     .param("quantity", inventory.quantity())
                     .param("updatedAt", utc(inventory.updatedAt()))
                     .update();
-
             return inventory;
         }
 
         try {
             jdbcClient.sql("""
-                INSERT INTO inventory (
-                    id,
-                    product_id,
-                    quantity,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    :id,
-                    :productId,
-                    :quantity,
-                    :createdAt,
-                    :updatedAt
-                )
+                INSERT INTO inventory (id, product_id, quantity, created_at, updated_at)
+                VALUES (:id, :productId, :quantity, :createdAt, :updatedAt)
                 """)
                     .param("id", inventory.id().value())
                     .param("productId", inventory.productId().value())
@@ -80,59 +69,23 @@ public class JdbcInventoryRepository implements InventoryRepository {
 
     @Override
     public Optional<Inventory> findById(InventoryId id) {
-        return jdbcClient.sql("""
-                SELECT
-                    id,
-                    product_id,
-                    quantity,
-                    created_at,
-                    updated_at
-                FROM inventory
-                WHERE id = :id
-                """)
+        return jdbcClient.sql("SELECT " + InventoryRowMapper.COLUMNS + " FROM inventory WHERE id = :id")
                 .param("id", id.value())
-                .query((rs, rowNum) -> Inventory.reconstitute(
-                        new InventoryId(UUID.fromString(rs.getString("id"))),
-                        new ProductId(UUID.fromString(rs.getString("product_id"))),
-                        rs.getInt("quantity"),
-                        rs.getTimestamp("created_at").toInstant(),
-                        rs.getTimestamp("updated_at").toInstant()
-                ))
+                .query(InventoryRowMapper.INSTANCE)
                 .optional();
     }
 
     @Override
     public Optional<Inventory> findByProductId(ProductId productId) {
-        return jdbcClient.sql("""
-                SELECT
-                    id,
-                    product_id,
-                    quantity,
-                    created_at,
-                    updated_at
-                FROM inventory
-                WHERE product_id = :productId
-                """)
+        return jdbcClient.sql("SELECT " + InventoryRowMapper.COLUMNS + " FROM inventory WHERE product_id = :productId")
                 .param("productId", productId.value())
-                .query((rs, rowNum) -> Inventory.reconstitute(
-                        new InventoryId(UUID.fromString(rs.getString("id"))),
-                        new ProductId(UUID.fromString(rs.getString("product_id"))),
-                        rs.getInt("quantity"),
-                        rs.getTimestamp("created_at").toInstant(),
-                        rs.getTimestamp("updated_at").toInstant()
-                ))
+                .query(InventoryRowMapper.INSTANCE)
                 .optional();
     }
 
     @Override
     public boolean existsByProductId(ProductId productId) {
-        return jdbcClient.sql("""
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM inventory
-                    WHERE product_id = :productId
-                )
-                """)
+        return jdbcClient.sql("SELECT EXISTS (SELECT 1 FROM inventory WHERE product_id = :productId)")
                 .param("productId", productId.value())
                 .query(Boolean.class)
                 .single();
@@ -144,6 +97,7 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 UPDATE inventory
                 SET
                     quantity = quantity + :quantity,
+                    version = version + 1,
                     updated_at = :updatedAt
                 WHERE id = :id
                 """)
@@ -151,71 +105,35 @@ public class JdbcInventoryRepository implements InventoryRepository {
                 .param("quantity", quantity)
                 .param("updatedAt", utc(Instant.now()))
                 .update();
-
-        return affectedRows > 0;
-    }
-
-    @Override
-    public boolean decreaseQuantity(InventoryId id, int quantity) {
-        int affectedRows = jdbcClient.sql("""
-                UPDATE inventory
-                SET
-                    quantity = quantity - :quantity,
-                    updated_at = :updatedAt
-                WHERE id = :id AND quantity >= :quantity
-                """)
-                .param("id", id.value())
-                .param("quantity", quantity)
-                .param("updatedAt", utc(Instant.now()))
-                .update();
-
         return affectedRows > 0;
     }
 
     @Override
     public void delete(Inventory inventory) {
-        jdbcClient.sql("""
-                DELETE FROM inventory
-                WHERE id = :id
-                """)
+        jdbcClient.sql("DELETE FROM inventory WHERE id = :id")
                 .param("id", inventory.id().value())
                 .update();
     }
 
     private boolean existsById(InventoryId id) {
-        return jdbcClient.sql("""
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM inventory
-                    WHERE id = :id
-                )
-                """)
+        return jdbcClient.sql("SELECT EXISTS (SELECT 1 FROM inventory WHERE id = :id)")
                 .param("id", id.value())
                 .query(Boolean.class)
                 .single();
     }
 
     /**
-     * Turns constraint violations on INSERT into domain exceptions. The SQLSTATE
-     * codes are standard, so the adapter does not depend on the driver's classes.
+     * Turns constraint violations on INSERT into domain exceptions, by standard
+     * SQLSTATE rather than driver classes.
      */
     private static RuntimeException translateInsertViolation(DataIntegrityViolationException e, Inventory inventory) {
-        String sqlState = sqlState(e);
-        if (UNIQUE_VIOLATION.equals(sqlState)) {
+        String sqlState = SqlStates.of(e);
+        if (SqlStates.UNIQUE_VIOLATION.equals(sqlState)) {
             return new InventoryAlreadyExistsException(inventory.productId());
         }
-        if (FOREIGN_KEY_VIOLATION.equals(sqlState)) {
+        if (SqlStates.FOREIGN_KEY_VIOLATION.equals(sqlState)) {
             return new UnknownProductException(inventory.productId());
         }
         return e;
-    }
-
-    private static String sqlState(Throwable throwable) {
-        for (Throwable t = throwable; t != null; t = t.getCause()) {
-            if (t instanceof SQLException sqlException) {
-                return sqlException.getSQLState();
-            }
-        }
-        return null;
     }
 }

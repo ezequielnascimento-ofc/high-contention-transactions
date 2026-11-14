@@ -13,6 +13,5 @@ public interface InventoryRepository {
     Optional<Inventory> findByProductId(ProductId productId);
     boolean existsByProductId(ProductId productId);
     boolean increaseQuantity(InventoryId id, int quantity);
-    boolean decreaseQuantity(InventoryId id, int quantity);
     void delete(Inventory inventory);
 }

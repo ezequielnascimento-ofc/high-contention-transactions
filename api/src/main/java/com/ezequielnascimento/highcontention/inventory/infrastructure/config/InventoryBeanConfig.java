@@ -4,6 +4,7 @@ import com.ezequielnascimento.highcontention.inventory.application.*;
 import com.ezequielnascimento.highcontention.inventory.domain.port.in.GetInventoryByProductIdUseCase;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryRepository;
 import com.ezequielnascimento.highcontention.inventory.domain.port.out.InventoryStockNotifier;
+import com.ezequielnascimento.highcontention.inventory.domain.port.out.StockDecrementer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,8 +29,8 @@ public class InventoryBeanConfig {
 
     @Bean
     DecreaseStockService decreaseStockService(
-            InventoryRepository inventoryRepository, InventoryStockNotifier inventoryStockNotifier) {
-        return new DecreaseStockService(inventoryRepository, inventoryStockNotifier);
+            StockDecrementer stockDecrementer, InventoryStockNotifier inventoryStockNotifier) {
+        return new DecreaseStockService(stockDecrementer, inventoryStockNotifier);
     }
 
     @Bean
