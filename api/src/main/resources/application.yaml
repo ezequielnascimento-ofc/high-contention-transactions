@@ -1,3 +1,11 @@
 spring:
   application:
     name: High Contention Transactions
+  # Local defaults for `./mvnw spring-boot:run` against `docker compose up db`.
+  # Docker Compose and any real deployment override them with the
+  # SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME and
+  # SPRING_DATASOURCE_PASSWORD environment variables.
+  datasource:
+    url: jdbc:postgresql://localhost:5432/highcontention
+    username: highcontention
+    password: highcontention
