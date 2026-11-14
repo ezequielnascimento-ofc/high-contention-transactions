@@ -3,6 +3,8 @@ package com.ezequielnascimento.highcontention.product.infrastructure.adapter.web
 import com.ezequielnascimento.highcontention.product.domain.model.ProductId;
 import com.ezequielnascimento.highcontention.product.domain.port.in.*;
 import com.ezequielnascimento.highcontention.product.infrastructure.adapter.web.dto.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@Tag(name = "Products", description = "Catalogue of products that can hold inventory")
 @RequestMapping("/api/v1/products")
 public class ProductController {
 
@@ -45,18 +48,21 @@ public class ProductController {
         this.listProductsUseCase = listProductsUseCase;
     }
 
+    @Operation(summary = "Create a product")
     @PostMapping
     public ResponseEntity<ProductResponse> create(@Valid @RequestBody CreateProductRequest request) {
         var product = createProductUseCase.execute(request.name(), request.description(), request.price());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Get a product")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> get(@PathVariable UUID id) {
         var product = getProductUseCase.execute(new ProductId(id));
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Rename a product")
     @PatchMapping("/{id}/name")
     public ResponseEntity<ProductResponse> rename(
             @PathVariable UUID id, @Valid @RequestBody RenameProductRequest request) {
@@ -64,6 +70,7 @@ public class ProductController {
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Change the price of a product")
     @PatchMapping("/{id}/price")
     public ResponseEntity<ProductResponse> changePrice(
             @PathVariable UUID id, @Valid @RequestBody ChangeProductPriceRequest request) {
@@ -71,6 +78,7 @@ public class ProductController {
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Change the description of a product")
     @PatchMapping("/{id}/description")
     public ResponseEntity<ProductResponse> changeDescription(
             @PathVariable UUID id, @RequestBody ChangeProductDescriptionRequest request) {
@@ -78,18 +86,21 @@ public class ProductController {
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Activate a product")
     @PostMapping("/{id}/activate")
     public ResponseEntity<ProductResponse> activate(@PathVariable UUID id) {
         var product = activateProductUseCase.execute(new ProductId(id));
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "Deactivate a product")
     @PostMapping("/{id}/deactivate")
     public ResponseEntity<ProductResponse> deactivate(@PathVariable UUID id) {
         var product = deactivateProductUseCase.execute(new ProductId(id));
         return ResponseEntity.ok(ProductResponse.from(product));
     }
 
+    @Operation(summary = "List all products")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> list() {
         var products = listProductsUseCase.execute()
